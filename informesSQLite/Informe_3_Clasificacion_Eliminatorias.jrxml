@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="Informe_Clasificacion_Eliminatorias" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+    
+    <parameter name="ELIMINATORIA_FILTRO" class="java.lang.String" isForPrompting="false">
+        <defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+    </parameter>
+    
+    <queryString>
+        <![CDATA[SELECT 
+            e.id,
+            e.nombre,
+            e.curso,
+            COUNT(CASE WHEN p.jugado = 1 AND 
+                  ((p.equipo_local_id = e.id AND COALESCE(p.goles_local, 0) > COALESCE(p.goles_visitante, 0)) OR
+                   (p.equipo_visitante_id = e.id AND COALESCE(p.goles_visitante, 0) > COALESCE(p.goles_local, 0))) 
+                  THEN 1 END) as victorias,
+            COUNT(CASE WHEN p.jugado = 1 AND 
+                  ((p.equipo_local_id = e.id AND COALESCE(p.goles_local, 0) = COALESCE(p.goles_visitante, 0)) OR
+                   (p.equipo_visitante_id = e.id AND COALESCE(p.goles_visitante, 0) = COALESCE(p.goles_local, 0))) 
+                  THEN 1 END) as empates,
+            COUNT(CASE WHEN p.jugado = 1 AND 
+                  ((p.equipo_local_id = e.id AND COALESCE(p.goles_local, 0) < COALESCE(p.goles_visitante, 0)) OR
+                   (p.equipo_visitante_id = e.id AND COALESCE(p.goles_visitante, 0) < COALESCE(p.goles_local, 0))) 
+                  THEN 1 END) as derrotas,
+            COALESCE(SUM(CASE WHEN p.equipo_local_id = e.id THEN COALESCE(p.goles_local, 0)
+                             WHEN p.equipo_visitante_id = e.id THEN COALESCE(p.goles_visitante, 0)
+                             ELSE 0 END), 0) as goles_favor,
+            COALESCE(SUM(CASE WHEN p.equipo_local_id = e.id THEN COALESCE(p.goles_visitante, 0)
+                             WHEN p.equipo_visitante_id = e.id THEN COALESCE(p.goles_local, 0)
+                             ELSE 0 END), 0) as goles_contra,
+            COALESCE(SUM(CASE WHEN p.jugado = 1 AND 
+                  ((p.equipo_local_id = e.id AND COALESCE(p.goles_local, 0) > COALESCE(p.goles_visitante, 0)) OR
+                   (p.equipo_visitante_id = e.id AND COALESCE(p.goles_visitante, 0) > COALESCE(p.goles_local, 0)))
+                  THEN 3 
+                  WHEN p.jugado = 1 AND 
+                  ((p.equipo_local_id = e.id AND COALESCE(p.goles_local, 0) = COALESCE(p.goles_visitante, 0)) OR
+                   (p.equipo_visitante_id = e.id AND COALESCE(p.goles_visitante, 0) = COALESCE(p.goles_local, 0)))
+                  THEN 1 
+                  ELSE 0 END), 0) as puntos
+        FROM equipos e
+        LEFT JOIN partidos p ON (p.equipo_local_id = e.id OR p.equipo_visitante_id = e.id) 
+            AND (CAST($P{ELIMINATORIA_FILTRO} AS TEXT) = '' OR p.eliminatoria = CAST($P{ELIMINATORIA_FILTRO} AS TEXT))
+        GROUP BY e.id, e.nombre, e.curso
+        ORDER BY puntos DESC, goles_favor DESC, goles_contra ASC]]>
+    </queryString>
+    
+    <field name="id" class="java.lang.Integer"/>
+    <field name="nombre" class="java.lang.String"/>
+    <field name="curso" class="java.lang.String"/>
+    <field name="victorias" class="java.lang.Integer"/>
+    <field name="empates" class="java.lang.Integer"/>
+    <field name="derrotas" class="java.lang.Integer"/>
+    <field name="goles_favor" class="java.lang.Integer"/>
+    <field name="goles_contra" class="java.lang.Integer"/>
+    <field name="puntos" class="java.lang.Integer"/>
+    
+    <variable name="posicion" class="java.lang.Integer" calculation="Count">
+        <variableExpression><![CDATA[$F{id}]]></variableExpression>
+    </variable>
+    
+    <variable name="total_victorias" class="java.lang.Integer" calculation="Sum">
+        <variableExpression><![CDATA[$F{victorias}]]></variableExpression>
+    </variable>
+    
+    <variable name="total_goles" class="java.lang.Integer" calculation="Sum">
+        <variableExpression><![CDATA[$F{goles_favor}]]></variableExpression>
+    </variable>
+    
+    <title>
+        <band height="100">
+            <staticText>
+                <reportElement x="0" y="0" width="555" height="40"/>
+                <textElement textAlignment="Center">
+                    <font size="22" isBold="true"/>
+                </textElement>
+                <text><![CDATA[TORNEO DE FÚTBOL]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="0" y="40" width="555" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="14"/>
+                </textElement>
+                <text><![CDATA[Clasificación y Estadísticas]]></text>
+            </staticText>
+            <textField pattern="dd/MM/yyyy HH:mm">
+                <reportElement x="400" y="70" width="155" height="15"/>
+                <textElement textAlignment="Right">
+                    <font size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+    
+    <columnHeader>
+        <band height="30">
+            <staticText>
+                <reportElement x="0" y="5" width="40" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Pos.]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="40" y="5" width="180" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Equipo]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="220" y="5" width="45" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[PTS]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="265" y="5" width="40" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[V]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="305" y="5" width="40" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[E]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="345" y="5" width="40" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[D]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="385" y="5" width="55" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[GF]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="440" y="5" width="55" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[GC]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="495" y="5" width="60" height="25" mode="Opaque" backcolor="#0066CC" forecolor="#FFFFFF"/>
+                <box><pen lineWidth="1.0"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9" isBold="true"/>
+                </textElement>
+                <text><![CDATA[DIF]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+    
+    <detail>
+        <band height="25">
+            <!-- Resaltar primeros 3 lugares -->
+            <rectangle>
+                <reportElement x="0" y="0" width="555" height="25" mode="Transparent">
+                    <printWhenExpression><![CDATA[$V{posicion} <= 3]]></printWhenExpression>
+                </reportElement>
+                <graphicElement>
+                    <pen lineWidth="2.0" lineColor="#FFD700"/>
+                </graphicElement>
+            </rectangle>
+            
+            <textField>
+                <reportElement x="0" y="0" width="40" height="25" mode="Opaque" backcolor="#EEEEEE">
+                    <printWhenExpression><![CDATA[$V{posicion} <= 3]]></printWhenExpression>
+                </reportElement>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="12" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$V{posicion}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="0" y="0" width="40" height="25">
+                    <printWhenExpression><![CDATA[$V{posicion} > 3]]></printWhenExpression>
+                </reportElement>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$V{posicion}]]></textFieldExpression>
+            </textField>
+            
+            <textField>
+                <reportElement x="40" y="0" width="180" height="25"/>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA["  " + $F{nombre}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="220" y="0" width="45" height="25"/>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="11" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{puntos}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="265" y="0" width="40" height="25"/>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{victorias}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="305" y="0" width="40" height="25"/>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{empates}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="345" y="0" width="40" height="25"/>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{derrotas}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="385" y="0" width="55" height="25"/>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{goles_favor}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="440" y="0" width="55" height="25"/>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{goles_contra}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="495" y="0" width="60" height="25"/>
+                <box><pen lineWidth="0.5"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="10" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{goles_favor} - $F{goles_contra}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+    
+    <pageFooter>
+        <band height="25">
+            <textField>
+                <reportElement x="200" y="5" width="155" height="15"/>
+                <textElement textAlignment="Center">
+                    <font size="9"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Página " + $V{PAGE_NUMBER}]]></textFieldExpression>
+            </textField>
+        </band>
+    </pageFooter>
+    
+    <summary>
+        <band height="100">
+            <staticText>
+                <reportElement x="0" y="10" width="555" height="25"/>
+                <textElement textAlignment="Center">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[ESTADÍSTICAS GLOBALES]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="50" y="45" width="150" height="20"/>
+                <textElement><font size="10" isBold="true"/></textElement>
+                <text><![CDATA[Total de victorias:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="200" y="45" width="100" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA[$V{total_victorias}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="50" y="65" width="150" height="20"/>
+                <textElement><font size="10" isBold="true"/></textElement>
+                <text><![CDATA[Total de goles:]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="200" y="65" width="100" height="20"/>
+                <textElement><font size="10"/></textElement>
+                <textFieldExpression><![CDATA[$V{total_goles}]]></textFieldExpression>
+            </textField>
+            <staticText>
+                <reportElement x="350" y="45" width="90" height="40"/>
+                <box><pen lineWidth="1.0" lineColor="#FFD700"/></box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="9"/>
+                </textElement>
+                <text><![CDATA[🏆 Equipo destacado con borde dorado]]></text>
+            </staticText>
+        </band>
+    </summary>
+    
+</jasperReport>
